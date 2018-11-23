@@ -72,6 +72,7 @@ class PlayfairCipher {
 
     /** The char to coords association map
      */
+  // names here are a bit confusing!
     CharOnGrid  atlas_;
 
     /** The coords to char association map

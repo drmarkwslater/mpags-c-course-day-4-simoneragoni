@@ -8,17 +8,13 @@
  * \brief Contains the typedef of the maps.
  */
 
+// map.hpp is a bit of a confusing name. Better to just put these in the PlayfariCipher.hpp file
+
 /**
  * \typedef Cartesian
  * \brief Alias for the XY coords
  */
 typedef std::pair < size_t,  size_t> Cartesian;
-
-/**
- * \typedef Grid
- * \brief Alias for the map's coords
- */
-typedef std::map < size_t, size_t > Grid;
 
 /**
  * \typedef CharOnGrid

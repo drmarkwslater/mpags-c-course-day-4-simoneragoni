@@ -20,9 +20,7 @@ PlayfairCipher::PlayfairCipher( const std::string& key )
 {
   // We have the key as a string, but the cipher needs a 5x5 grid, so we first need to convert it.
   // We default to having a key of 0, i.e. no encryption, if no (valid) key was provided on the command line
-  if ( ! key.empty() ) {
-      setKey(key);
-  }
+  setKey(key);
 }
 //_______________________________________________________
 void PlayfairCipher::setKey( const std::string& key )
@@ -37,33 +35,9 @@ void PlayfairCipher::setKey( const std::string& key )
  * - to the end iterator of the original vector.
  */
   std::copy( alphabet_.begin(), alphabet_.end(), back_inserter(key_) );
-  // key_.push_back('A');
-  // key_.push_back('B');
-  // key_.push_back('C');
-  // key_.push_back('D');
-  // key_.push_back('E');
-  // key_.push_back('F');
-  // key_.push_back('G');
-  // key_.push_back('H');
-  // key_.push_back('I');
-  // key_.push_back('J');
-  // key_.push_back('K');
-  // key_.push_back('L');
-  // key_.push_back('M');
-  // key_.push_back('N');
-  // key_.push_back('O');
-  // key_.push_back('P');
-  // key_.push_back('Q');
-  // key_.push_back('R');
-  // key_.push_back('S');
-  // key_.push_back('T');
-  // key_.push_back('U');
-  // key_.push_back('V');
-  // key_.push_back('W');
-  // key_.push_back('X');
-  // key_.push_back('Y');
-  // key_.push_back('Z');
 
+  // Could also do:
+  // key_ += "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
 
   // Make sure the key is upper case
 
@@ -125,12 +99,6 @@ void PlayfairCipher::setKey( const std::string& key )
  * - Created a cartesian grid of size_t with the expected XY coords.
  *
  */
- Cartesian fiveByFiveGrid[5][5];
- for (size_t i = 0; i < 5; i++) {
-      for (size_t j = 0; j < 5; j++) {
-            fiveByFiveGrid[i][j] = std::make_pair(i,j);
-      }
- }
   // Store the playfair cipher key map
 
   /* - SIMONE IN:
@@ -143,8 +111,8 @@ void PlayfairCipher::setKey( const std::string& key )
  std::cout << key_ << std::endl;
  for (size_t i = 0; i < 5; i++) {
       for (size_t j = 0; j < 5; j++) {
-            atlas_.insert(std::make_pair( key_.at( i*5 + j ), fiveByFiveGrid[i][j] ));
-            hasbro_.insert(std::make_pair( fiveByFiveGrid[i][j], key_.at( i*5 + j ) ));
+	atlas_.insert(std::make_pair( key_.at( i*5 + j ), std::make_pair(i, j) ));
+	hasbro_.insert(std::make_pair( std::make_pair(i,j), key_.at( i*5 + j ) ));
       }
  }
 }
@@ -182,9 +150,12 @@ std::string PlayfairCipher::applyCipher( const std::string& inputText,
  *  - so that the logic does not get affected but the inner order does.
  *  - This action HAS to happen AFTER changing all Js to Is.
  */
+  
+  // altering a container while looping over it is not a good idea
+  // use a temporary variable instead.
   size_t counter = 0;
   size_t duplica = 0;
-  for ( auto iter { std::begin(outputText) }; iter !=  outputText.end() + duplica - 2; ++iter )
+  for ( auto iter = std::begin(outputText) ; iter !=  outputText.end() + duplica - 2; ++iter )
   {
         if( ( counter%2 == 0 ) &&  (*iter == *(iter + 1) ) )
         {
@@ -202,64 +173,61 @@ std::string PlayfairCipher::applyCipher( const std::string& inputText,
   * - It felt more natural and readable to achieve
   * - this by makings of std::push_back.
   */
-  size_t outputTextSize = outputText.size();
-  if ( outputTextSize%2 == 1 ) outputText.push_back('Z');
+  if ( outputText.size()%2 == 1 ) outputText.push_back('Z');
 
   // Loop over the input in Digraphs
   // - Find the coords in the grid for each digraph
   // - Apply the rules to these coords to get 'new' coords
   // - Find the letter associated with the new coords
 
+  // marginally better to use a switch here
 if(cipherMode == CipherMode::Encrypt)
 {
-  for ( auto iter2 { std::begin(outputText) }; iter2 != outputText.end(); iter2 += 2 )
+  for ( auto iter2 = std::begin(outputText); iter2 != outputText.end(); iter2 += 2 )
   {
         auto mapIter  = atlas_.find( *iter2     );
         auto mapIter2 = atlas_.find( *(iter2+1) );
 
-        Cartesian foundYou       =  std::make_pair( std::get<0> ((*mapIter).second),
-                                                    std::get<1> ((*mapIter).second ));
-        Cartesian foundYou2      =  std::make_pair( std::get<0> ((*mapIter2).second),
-                                                    std::get<1> ((*mapIter2).second ));
+        Cartesian foundYou       =  (*mapIter).second;
+        Cartesian foundYou2      =  (*mapIter2).second;
+
         Cartesian replacement;
         Cartesian replacement2;
-        if ( std::get<0> (foundYou) == 0 )
-        {
-            //this "if" completes the rectangle case
-            if ( std::get<0> (foundYou2) == 4 )
-            {
-                if ( std::get<1> (foundYou) != std::get<1> (foundYou2)  )
-                {
-                    replacement  =  std::make_pair( 4, std::get<1> ((*mapIter).second) );
-                    auto help    = hasbro_.find(replacement);
-                    *iter2       = (*help).second;
-                    replacement2 =  std::make_pair( 0, std::get<1> ((*mapIter2).second) );
-                    auto help2   = hasbro_.find(replacement2);
-                    *(iter2 + 1) = (*help2).second;
-                }
-            }
-        }
         //this "if" completes the case horizontal case
+	// add one to each X coord
         if ( std::get<1> (foundYou) == std::get<1> (foundYou2) )
         {
-            if ( (std::get<0> (foundYou2) == std::get<0> (foundYou) + 1)%5 )
-            {
-                replacement  =  std::make_pair( (std::get<0> ((*mapIter).second) + 2)%5 ,
-                                                 std::get<1> ((*mapIter).second) );
-                auto help    = hasbro_.find(replacement);
-                *iter2       = (*help).second;
-            }
+	  replacement = std::make_pair( ((*mapIter).first + 1) % 5, (*mapIter).second );
+	  auto help    = hasbro_.find(replacement);
+	  *iter2 = (*help).second;
+
+	  replacement = std::make_pair( ((*mapIter2).first + 1) % 5, (*mapIter2).second );
+	  help    = hasbro_.find(replacement);
+	  *(iter2+1) = (*help).second;
         }
         //this "if" completes the case vertical case
-        if ( std::get<0> (foundYou) == std::get<0> (foundYou2) )
+	// add one to each y coord
+        else if ( std::get<0> (foundYou) == std::get<0> (foundYou2) )
         {
-            if ( (std::get<1> (foundYou2) == std::get<1> (foundYou) + 1)%5 )
-            {
-                replacement  =  std::make_pair( std::get<0> ((*mapIter).second),
-                                               (std::get<1> ((*mapIter).second) + 2)%5 );
-                auto help    = hasbro_.find(replacement);
-                *iter2       = (*help).second;
-            }
+	  replacement = std::make_pair( (*mapIter).first, ((*mapIter).second + 1) % 5 );
+	  auto help    = hasbro_.find(replacement);
+	  *iter2 = (*help).second;
+
+	  replacement = std::make_pair( (*mapIter2).first + 1, ((*mapIter2).second + 1) % 5 );
+	  help    = hasbro_.find(replacement);
+	  *(iter2+1) = (*help).second;
+        }
+	else
+        {
+            //this "if" completes the rectangle case
+	  // swap the x positions of the two coords
+	  replacement  =  std::make_pair((*mapIter2).first, (*mapIter).second );
+	  auto help    = hasbro_.find(replacement);
+	  *iter2       = (*help).second;
+
+	  replacement  =  std::make_pair((*mapIter).first, (*mapIter2).second );
+	  auto help    = hasbro_.find(replacement);
+	  *iter2       = (*help).second;
         }
 
 
@@ -267,7 +235,7 @@ if(cipherMode == CipherMode::Encrypt)
 }
 else if (cipherMode == CipherMode::Decrypt)
 {
-  for ( auto iter2 { std::begin(outputText) }; iter2 != outputText.end(); iter2 += 2 )
+  for ( auto iter2 = std::begin(outputText); iter2 != outputText.end(); iter2 += 2 )
   {
         auto mapIter  = atlas_.find( *iter2     );
         auto mapIter2 = atlas_.find( *(iter2+1) );
